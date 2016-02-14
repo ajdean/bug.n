@@ -1,4 +1,4 @@
-/*
+﻿/*
   bug.n -- tiling window management
   Copyright (c) 2010-2015 Joshua Fuhs, joten
 
@@ -22,7 +22,7 @@ Monitor_init(m, doRestore) {
   Monitor_#%m%_showTaskBar  := Config_showTaskBar
   Monitor_#%m%_taskBarClass := ""
   Monitor_#%m%_taskBarPos   := ""
-  Loop, % Config_viewCount
+  Loop, % Config_%m%_viewCount
     View_init(m, A_Index)
   If doRestore
     Config_restoreLayout(Main_autoLayout, m)
@@ -40,10 +40,10 @@ Monitor_activateView(i, d = 0) {
     i := Monitor_#%Manager_aMonitor%_aView_#2
   Else If (i = 0)
     i := Monitor_#%Manager_aMonitor%_aView_#1
-  i := Manager_loop(i, d, 1, Config_viewCount)
+  i := Manager_loop(i, d, 1, Config_%Manager_aMonitor%_viewCount)
 
   Debug_logMessage("DEBUG[1] Monitor_activateView; i: " . i . ", d: " . d . ", Manager_aMonitor: " . Manager_aMonitor . ", wndIds: " . View_#%Manager_aMonitor%_#%i%_wndIds, 1)
-  If (i <= 0) Or (i > Config_viewCount) Or Manager_hideShow
+  If (i <= 0) Or (i > Config_%Manager_aMonitor%_viewCount) Or Manager_hideShow
     Return
   ;; Re-arrange the windows on the active view.
   If (i = Monitor_#%Manager_aMonitor%_aView_#1) {
@@ -219,7 +219,7 @@ Monitor_moveToIndex(m, n) {
   Monitor_#%n%_x      := Monitor_#%m%_x
   Monitor_#%n%_y      := Monitor_#%m%_y
   Monitor_#%n%_barY   := Monitor_#%m%_barY
-  Loop, % Config_viewCount
+  Loop, % Config_%m%_viewCount
     View_moveToIndex(m, A_Index, n, A_Index)
 }
 
@@ -228,13 +228,13 @@ Monitor_setWindowTag(i, d = 0) {
 
   If (i = 0)
     i := Monitor_#%Manager_aMonitor%_aView_#1
-  Else If (i <= Config_viewCount)
-    i := Manager_loop(i, d, 1, Config_viewCount)
+  Else If (i <= Config_%Manager_aMonitor%_viewCount)
+    i := Manager_loop(i, d, 1, Config_%Manager_aMonitor%_viewCount)
 
   WinGet, aWndId, ID, A
-  If InStr(Manager_managedWndIds, aWndId ";") And (i > 0) And (i <= Config_viewCount Or i = 10) {
+  If InStr(Manager_managedWndIds, aWndId ";") And (i > 0) And (i <= Config_%Manager_aMonitor%_viewCount Or i = 10) {
     If (i = 10) {
-      Loop, % Config_viewCount {
+      Loop, % Config_%Manager_aMonitor%_viewCount {
         If Not (Window_#%aWndId%_tags & (1 << A_Index - 1)) {
           View_#%Manager_aMonitor%_#%A_Index%_wndIds := aWndId ";" View_#%Manager_aMonitor%_#%A_Index%_wndIds
           View_setActiveWindow(Manager_aMonitor, A_Index, aWndId)
@@ -243,7 +243,7 @@ Monitor_setWindowTag(i, d = 0) {
         }
       }
     } Else {
-      Loop, % Config_viewCount {
+      Loop, % Config_%Manager_aMonitor%_viewCount {
         If Not (A_index = i) {
           StringReplace, View_#%Manager_aMonitor%_#%A_Index%_wndIds, View_#%Manager_aMonitor%_#%A_Index%_wndIds, %aWndId%`;,
           View_setActiveWindow(Manager_aMonitor, A_Index, 0)
@@ -339,7 +339,7 @@ Monitor_toggleWindowTag(i, d = 0) {
   Local aWndId, wndId
 
   WinGet, aWndId, ID, A
-  If (InStr(Manager_managedWndIds, aWndId ";") And i >= 0 And i <= Config_viewCount) {
+  If (InStr(Manager_managedWndIds, aWndId ";") And i >= 0 And i <= Config_%Manager_aMonitor%_viewCount) {
     If (Window_#%aWndId%_tags & (1 << i - 1)) {
       If Not ((Window_#%aWndId%_tags - (1 << i - 1)) = 0) {
         Window_#%aWndId%_tags -= 1 << i - 1

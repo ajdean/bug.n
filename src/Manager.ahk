@@ -1,4 +1,4 @@
-/*
+﻿/*
   bug.n -- tiling window management
   Copyright (c) 2010-2015 Joshua Fuhs, joten
 
@@ -158,7 +158,7 @@ Manager_cleanup()
     Monitor_#%m%_showBar := False
     Monitor_#%m%_showTaskBar := True
     Monitor_getWorkArea(m)
-    Loop, % Config_viewCount
+    Loop, % Config_%m%_viewCount
     {
       View_arrange(m, A_Index, True)
     }
@@ -390,7 +390,7 @@ Manager_manage(preferredMonitor, preferredView, wndId, rule = "") {
 
   ; Do view placement.
   If isManaged {
-    Loop, % Config_viewCount
+    Loop, % Config_%m%_viewCount
       If (Window_#%wndId%_tags & (1 << (A_Index - 1))) {
         If (body) {
           ; Try to position near the body.
@@ -561,7 +561,7 @@ Manager_onShellMessage(wParam, lParam) {
       If (Config_onActiveHiddenWnds = "view")
       {  ;; ... change the view to show the first hidden window
         wndId := SubStr(wndIds, 1, InStr(wndIds, ";") - 1)
-        Loop, % Config_viewCount
+        Loop, % Config_%m%_viewCount
         {
           If (Window_#%wndId%_tags & 1 << A_Index - 1)
           {
@@ -619,7 +619,7 @@ Manager_onShellMessage(wParam, lParam) {
         i := A_Index + 1
         Bar_updateLayout(i)
         Bar_updateStatic(i)
-        Loop, % Config_viewCount
+        Loop, % Config_%i%_viewCount
           Bar_updateView(i, A_Index)
       }
       Bar_updateStatus()
@@ -670,7 +670,7 @@ Manager_resetMonitorConfiguration() {
       SysGet, mPrimary, MonitorPrimary
       GuiN := (m - 1) + 1
       Gui, %GuiN%: Destroy
-      Loop, % Config_viewCount {
+      Loop, % Config_%i%_viewCount {
         If View_#%i%_#%A_Index%_wndIds {
           View_#%mPrimary%_#%A_Index%_wndIds .= View_#%i%_#%A_Index%_wndIds
           StringTrimRight, wndIds, View_#%i%_#%A_Index%_wndIds, 1
@@ -773,7 +773,7 @@ Manager__restoreWindowState(filename) {
       i := InStr(A_LoopReadLine, "=", j + 1)
 
 
-      If (m <= Manager_monitorCount) And ( v <= Config_viewCount ) {
+      If (m <= Manager_monitorCount) And ( v <= Config_%m%_viewCount ) {
         view_list%vidx% := SubStr(A_LoopReadLine, i + 1)
         view_m%vidx% := m
         view_v%vidx% := v
@@ -961,7 +961,7 @@ Manager_setViewMonitor(i, d = 0) {
     StringTrimRight, wndIds, View_#%Manager_aMonitor%_#%aView%_wndIds, 1
     Loop, PARSE, wndIds, `;
     {
-      Loop, % Config_viewCount {
+      Loop, % Config_%i%_viewCount {
         StringReplace, View_#%Manager_aMonitor%_#%A_Index%_wndIds, View_#%Manager_aMonitor%_#%A_Index%_wndIds, %A_LoopField%`;,
         View_setActiveWindow(Manager_aMonitor, A_Index, 0)
       }
@@ -969,7 +969,7 @@ Manager_setViewMonitor(i, d = 0) {
       Window_#%A_LoopField%_tags := 1 << v - 1
     }
     View_arrange(Manager_aMonitor, aView)
-    Loop, % Config_viewCount {
+    Loop, % Config_%i%_viewCount {
       Bar_updateView(Manager_aMonitor, A_Index)
     }
 
@@ -1013,7 +1013,7 @@ Manager_setWindowMonitor(i, d = 0) {
 
   WinGet, aWndId, ID, A
   If (Manager_monitorCount > 1 And InStr(Manager_managedWndIds, aWndId ";")) {
-    Loop, % Config_viewCount {
+    Loop, % Config_%i%_viewCount {
       StringReplace, View_#%Manager_aMonitor%_#%A_Index%_wndIds, View_#%Manager_aMonitor%_#%A_Index%_wndIds, %aWndId%`;,
       If (View_getActiveWindow(Manager_aMonitor, A_Index) = aWndId)
         View_setActiveWindow(Manager_aMonitor, A_Index, 0)
@@ -1154,7 +1154,7 @@ Manager_unmanage(wndId) {
   aView := Monitor_#%Manager_aMonitor%_aView_#1
 
   a := Window_#%wndId%_tags & 1 << aView - 1
-  Loop, % Config_viewCount {
+  Loop, % Config_%Manager_aMonitor%_viewCount {
     If (Window_#%wndId%_tags & 1 << A_Index - 1) {
       StringReplace, View_#%Manager_aMonitor%_#%A_Index%_wndIds, View_#%Manager_aMonitor%_#%A_Index%_wndIds, % wndId ";",, All
       StringReplace, View_#%Manager_aMonitor%_#%A_Index%_aWndIds, View_#%Manager_aMonitor%_#%A_Index%_aWndIds, % wndId ";",, All

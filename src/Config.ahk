@@ -1,4 +1,4 @@
-/*
+﻿/*
   bug.n -- tiling window management
   Copyright (c) 2010-2015 Joshua Fuhs, joten
 
@@ -26,6 +26,10 @@ Config_init() {
   Config_fontName          := "Lucida Console"
   Config_fontSize          :=
   Config_largeFontSize     := 24
+  Config_viewFontName      := "Lucida Console"
+  Config_viewFontSize      :=
+  Config_viewAsIcons	   := False
+  Config_viewWidth		   :=
   Loop, 3 {
     Config_backColor_#%A_Index% :=
     Config_foreColor_#%A_Index% :=
@@ -57,6 +61,7 @@ Config_init() {
                                 ;; but is dependant on the setting in the `Display control panel` of Windows under `Appearance and Personalization`.
 
   ;; Window arrangement
+  Config_monitorCount		:= 1
   Config_viewNames          := "1;2;3;4;5;6;7;8;9"
   Config_layout_#1          := "[]=;tile"
   Config_layout_#2          := "[M];monocle"
@@ -112,13 +117,22 @@ Config_init() {
     Config_layoutFunction_#%A_Index% := layout2
     Config_layoutSymbol_#%A_Index%   := layout1
   }
-  StringSplit, vNames, Config_viewNames, `;
-  If vNames0 > 9
-    Config_viewCount := 9
-  Else
-    Config_viewCount := vNames0
-  Loop, % Config_viewCount
-    Config_viewNames_#%A_Index% := vNames%A_Index%
+  Loop, % Config_monitorCount {
+	  m := A_Index
+	  StringSplit, vNames, Config_%m%_viewNames, `;
+	  If (vNames0 > 9) {
+		;;Config_viewCount := 9
+		Config_%m%_viewCount := 9
+	  }
+	  Else {
+		;;Config_viewCount := vNames0
+		Config_%m%_viewCount := vNames0
+	  }
+	  Loop, % Config_%m%_viewCount {
+		;;Config_viewNames_#%A_Index% := vNames%A_Index%
+		Config_%m%_viewNames_#%A_Index% := vNames%A_Index%
+	  }
+  }
 }
 
 Config_initColors() {
@@ -353,7 +367,7 @@ Config_saveSession(original, target)
       text .= "Monitor_#" m "_aView_#2=" Monitor_#%m%_aView_#2 "`n"
     If Not (Monitor_#%m%_showBar = Config_showBar)
       text .= "Monitor_#" m "_showBar=" Monitor_#%m%_showBar "`n"
-    Loop, % Config_viewCount
+    Loop, % Config_%m%_viewCount
     {
       If Not (View_#%m%_#%A_Index%_layout_#1 = 1)
         text .= "View_#" m "_#" A_Index "_layout_#1=" View_#%m%_#%A_Index%_layout_#1 "`n"

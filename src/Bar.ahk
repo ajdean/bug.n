@@ -1,4 +1,4 @@
-/*
+﻿/*
   bug.n -- tiling window management
   Copyright (c) 2010-2015 Joshua Fuhs, joten
 
@@ -48,12 +48,16 @@ Bar_init(m) {
   Gui, Font, c%Config_fontColor_#1_#3% s%Config_fontSize%, %Config_fontName%
 
   ;; Views
-  Loop, % Config_viewCount {
-    w := Bar_getTextWidth(" " Config_viewNames_#%A_Index% " ")
-    Bar_addElement(m, "view_#" A_Index, " " Config_viewNames_#%A_Index% " ", x1, y1, w, Config_backColor_#1_#1, Config_foreColor_#1_#1, Config_fontColor_#1_#1)
+  Gui, Font, s%Config_viewFontSize%, %Config_viewFontName%
+  Loop, % Config_%m%_viewCount {
+	w := Config_viewWidth
+	if Not w
+		w := Bar_getTextWidth(" " Config_%m%_viewNames_#%A_Index% " ")
+    Bar_addElement(m, "view_#" A_Index, " " Config_%m%_viewNames_#%A_Index% " ", x1, y1, w, Config_backColor_#1_#1, Config_foreColor_#1_#1, Config_fontColor_#1_#1)
     titleWidth -= w
     x1 += w
   }
+  Gui, Font, c%Config_fontColor_#1_#3% s%Config_fontSize%, %Config_fontName%
   ;; Layout
   w := Bar_getTextWidth(" ?????? ")
   Bar_addElement(m, "layout", " ?????? ", x1, y1, w, Config_backColor_#1_#2, Config_foreColor_#1_#2, Config_fontColor_#1_#2)
@@ -192,8 +196,18 @@ Bar_addElement(m, id, text, x, y1, width, backColor, foreColor, fontColor) {
   Gui, Add, Text, x%x% y%y1% w%width% h%Bar_ctrlHeight% BackgroundTrans vBar_#%m%_%id%_event gBar_GuiClick,
   Gui, Add, Progress, x%x% y%y1% w%width% h%Bar_ctrlHeight% Background%backColor% c%foreColor% vBar_#%m%_%id%_highlighted
   GuiControl, , Bar_#%m%_%id%_highlighted, 100
-  Gui, Font, c%fontColor%
-  Gui, Add, Text, x%x% y%y2% w%width% h%Bar_textHeight% BackgroundTrans Center vBar_#%m%_%id%, %text%
+  
+  If((InStr(id, "view_") > 0) And (Config_viewAsIcons)) {
+	y3 := y1 + ((Bar_ctrlHeight - 16) / 2) - 1
+	t = %text%
+	ext := ".ico"
+	Gui, Font, c%foreColor%
+	Gui, Add, Text, x%x% y%y2% w16 h%Bar_textHeight% BackgroundTrans Center vBar_#%m%_%id%, %text%
+	Gui, Add, Picture, x%x% y%y3% w16 h16 BackgroundTrans Center vBar_#%m%_%id%_ico, %t%%ext%
+  } else {
+	Gui, Font, c%fontColor%
+    Gui, Add, Text, x%x% y%y2% w%width% h%Bar_textHeight% BackgroundTrans Center vBar_#%m%_%id%, %text%
+  }
 }
 
 Bar_cmdGuiEnter:
@@ -506,10 +520,10 @@ Bar_updateView(m, v) {
     GuiControl, +c%Config_fontColor_#1_#1%, Bar_#%m%_view_#%v%
   }
 
-  Loop, % Config_viewCount {
+  Loop, % Config_%m%_viewCount {
     StringTrimRight, wndIds, View_#%m%_#%A_Index%_wndIds, 1
     StringSplit, wndId, wndIds, `;
     GuiControl, , Bar_#%m%_view_#%A_Index%_highlighted, % wndId0 / managedWndId0 * 100    ;; Update the percentage fill for the view.
-    GuiControl, , Bar_#%m%_view_#%A_Index%, % Config_viewNames_#%A_Index%                 ;; Refresh the number on the bar.
+    GuiControl, , Bar_#%m%_view_#%A_Index%, % Config_%m%_viewNames_#%A_Index%                 ;; Refresh the number on the bar.
   }
 }
