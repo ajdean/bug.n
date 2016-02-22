@@ -21,6 +21,7 @@ Monitor_init(m, doRestore) {
   Monitor_#%m%_showBar  := Config_showBar
   Monitor_#%m%_showTaskBar  := Config_showTaskBar
   Monitor_#%m%_taskBarClass := ""
+  Monitor_#%m%_taskBarWnd := ""
   Monitor_#%m%_taskBarPos   := ""
   Loop, % Config_viewCount
     View_init(m, A_Index)
@@ -146,14 +147,24 @@ Monitor_getWorkArea(m) {
     wndClasses .= ";bbLeanBar;bbSlit;BBToolbar;SystemBarEx"
   Loop, PARSE, wndClasses, `;
   {
-    wndId := WinExist("ahk_class " A_LoopField)
-    If wndId {
+	WinGet, WinList, List, ahk_class %A_LoopField%
+    ;wndId := WinExist("ahk_class " A_LoopField)
+    ;If wndId {
+	Loop %WinList% {
+	  wndId := WinList%A_Index%
       WinGetPos, wndX, wndY, wndWidth, wndHeight, ahk_id %wndId%
       x := wndX + wndWidth / 2
       y := wndY + wndHeight / 2
       If (x >= monitorLeft && x <= monitorRight && y >= monitorTop && y <= monitorBottom) {
-        If (A_LoopField = "Shell_TrayWnd") Or (A_LoopField = "Shell_SecondaryTrayWnd")
+        If (A_LoopField = "Shell_TrayWnd") {
           Monitor_#%m%_taskBarClass := A_LoopField
+		  Monitor_#%m%_taskBarWnd := wndId
+		}
+		If (A_LoopField = "Shell_SecondaryTrayWnd") {
+          ;Monitor_#%m%_taskBarClass := A_LoopField
+		  ;Monitor_#%m%_taskBarWnd := wndId
+		  WinHide, ahk_id %wndId%
+		}
 
         If (wndHeight < wndWidth) {
           ;; Horizontal
@@ -186,7 +197,7 @@ Monitor_getWorkArea(m) {
   bHeight := Round(Bar_height / Config_scalingFactor)
   bTop := 0
   If Monitor_#%m%_showBar {
-    If (Config_verticalBarPos = "top") Or (Config_verticalBarPos = "tray") And Not Monitor_#%m%_taskBarClass {
+    If (Config_verticalBarPos = "top") Or (Config_verticalBarPos = "tray") And Not Monitor_#%m%_taskBarWnd {
       bTop := monitorTop
       monitorTop += bHeight
     } Else If (Config_verticalBarPos = "bottom") {
@@ -318,16 +329,17 @@ Monitor_toggleTaskBar() {
   Local m
 
   m := Manager_aMonitor
-  If Monitor_#%m%_taskBarClass {
+  If Monitor_#%m%_taskBarWnd {
     Monitor_#%m%_showTaskBar := Not Monitor_#%m%_showTaskBar
     Manager_hideShow := True
     If Not Monitor_#%m%_showTaskBar {
       WinHide, Start ahk_class Button
-      WinHide, % "ahk_class " Monitor_#%m%_taskBarClass
+      WinHide, % "ahk_id " Monitor_#%m%_taskBarWnd
     } Else {
       WinShow, Start ahk_class Button
-      WinShow, % "ahk_class " Monitor_#%m%_taskBarClass
+      WinShow, % "ahk_id " Monitor_#%m%_taskBarWnd
     }
+	
     Manager_hideShow := False
     Monitor_getWorkArea(m)
     Bar_move(m)

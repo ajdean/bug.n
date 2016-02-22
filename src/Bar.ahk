@@ -23,9 +23,17 @@ Bar_init(m) {
     wndWidth := Config_barWidth
 
   wndWidth := Round(wndWidth * Config_scalingFactor)
-  If (Config_verticalBarPos = "tray" And Monitor_#%m%_taskBarClass) {
+  If (Config_verticalBarPos = "tray" And Monitor_#%m%_taskBarWnd) {
     Bar_ctrlHeight := Round(Bar_ctrlHeight * Config_scalingFactor)
     Bar_height := Round(Bar_height * Config_scalingFactor)
+	
+	;WinGetPos, , , trayWidth, , ahk_class TrayNotifyWnd
+	;MsgBox % trayWidth
+	
+	if (m = 1)
+	{
+		wndWidth -= 282
+	}
   }
 
   Monitor_#%m%_barWidth := wndWidth
@@ -36,7 +44,7 @@ Bar_init(m) {
   y1 := 0
   y2 := (Bar_ctrlHeight - Bar_textHeight) / 2
   h2 := Bar_textHeight
-
+  
   ;; Create the GUI window
   wndTitle := "bug.n_BAR_" m
   GuiN := (m - 1) + 1
@@ -111,6 +119,10 @@ Bar_init(m) {
     y1 += h1
     y2 += h1
   }
+  If(m > 1)
+  {
+    titleWidth -= 282
+  }
   Bar_addElement(m, "title", "", x1, y1, titleWidth, Config_backColor_#1_#3, Config_foreColor_#1_#3, Config_fontColor_#1_#3)
 
   If (Config_horizontalBarPos = "left")
@@ -123,7 +135,7 @@ Bar_init(m) {
     x1 := Config_horizontalBarPos
   Else If (Config_horizontalBarPos < 0)
     x1 := Monitor_#%m%_width - wndWidth / Config_scalingFactor + Config_horizontalBarPos
-  If Not (Config_verticalBarPos = "tray" And Monitor_#%m%_taskBarClass)
+  If Not (Config_verticalBarPos = "tray" And Monitor_#%m%_taskBarWnd)
     x1 += Monitor_#%m%_x
   x1 := Round(x1)
 
@@ -136,10 +148,14 @@ Bar_init(m) {
   Else
     Gui, Show, NoActivate Hide x%x1% y%y1% w%wndWidth% h%Bar_height%, %wndTitle%
   WinSet, Transparent, %Config_barTransparency%, %wndTitle%
+  ;Winset, Alwaysontop, , %wndTitle%
   wndId := WinExist(wndTitle)
-  If (Config_verticalBarPos = "tray" And Monitor_#%m%_taskBarClass) {
-    trayWndId := WinExist("ahk_class " Monitor_#%m%_taskBarClass)
-    DllCall("SetParent", "UInt", wndId, "UInt", trayWndId)
+  If (Config_verticalBarPos = "tray" And Monitor_#%m%_taskBarWnd) {
+    ;trayWndId := WinExist("ahk_id " Monitor_#%m%_taskBarClass)
+    ;DllCall("SetParent", "UInt", wndId, "UInt", trayWndId)
+	;MsgBox % m
+    ;MsgBox % Monitor_#%m%_taskBarWnd
+	DllCall("SetParent", "UInt", wndId, "UInt", Monitor_#%m%_taskBarWnd)
   } Else {
     appBarMsg := DllCall("RegisterWindowMessage", Str, "AppBarMsg")
 
@@ -351,7 +367,7 @@ Bar_toggleCommandGui() {
     Else
       x := Monitor_#%Manager_aMonitor%_barX + Monitor_#%Manager_aMonitor%_barWidth - Bar_#0_#0W   ;; x := mX + (mBarX - mX) + mBarW - w
     
-    If (Config_verticalBarPos = "top") Or (Config_verticalBarPos = "tray") And (Monitor_#%Manager_aMonitor%_taskBarPos = "top" Or Not Monitor_#%Manager_aMonitor%_taskBarClass)
+    If (Config_verticalBarPos = "top") Or (Config_verticalBarPos = "tray") And (Monitor_#%Manager_aMonitor%_taskBarPos = "top" Or Not Monitor_#%Manager_aMonitor%_taskBarWnd)
       y := Monitor_#%Manager_aMonitor%_y
     Else
       y := Monitor_#%Manager_aMonitor%_y + Monitor_#%Manager_aMonitor%_height - Bar_#0_#0H
