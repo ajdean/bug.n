@@ -150,6 +150,11 @@ Manager_cleanup()
   WinShow, Start ahk_class Button
   WinShow, ahk_class Shell_TrayWnd
   Manager_hideShow := False
+  WinGet, WinList, List, ahk_class Shell_SecondaryTrayWnd
+  Loop %WinList% {
+    wndId := WinList%A_Index%
+    WinShow, ahk_id %wndId%
+  }
 
   ;; Restore window positions and sizes.
   Loop, % Manager_monitorCount
