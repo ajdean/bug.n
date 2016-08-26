@@ -50,7 +50,7 @@ View_activateWindow(i, d = 0) {
   StringSplit, wndId, wndIds, `;
   Debug_logMessage("DEBUG[2] wndId count: " . wndId0, 2, False)
   If (wndId0 > 1) {
-    If Window_#%aWndId%_isFloating
+    If Not InStr(Manager_managedWndIds, aWndId . ";") Or Window_#%aWndId%_isFloating
       Window_set(aWndId, "Bottom", "")
     Loop, % wndId0 {
       If (wndId%A_Index% = aWndId) {
@@ -150,6 +150,7 @@ View_getActiveWindow(m, v) {
   Local listId, listIds, wndId
 
   listIds := "aWndIds;wndIds"
+  wndId := 0
   Loop, Parse, listIds, `;
   {
     listId := A_LoopField
@@ -178,10 +179,12 @@ View_getTiledWndIds(m, v)
 {
   Local n, tiledWndIds, wndIds
 
+  n := 0
+  tiledWndIds := ""
   StringTrimRight, wndIds, View_#%m%_#%v%_wndIds, 1
   Loop, PARSE, wndIds, `;
   {
-    If Not Window_#%A_LoopField%_isFloating And WinExist("ahk_id " A_LoopField) and Not Window_isHung(A_LoopField)
+    If A_LoopField And Not Window_#%A_LoopField%_isFloating And WinExist("ahk_id " A_LoopField) and Not Window_isHung(A_LoopField)
     {
       n += 1
       tiledWndIds .= A_LoopField ";"
@@ -221,7 +224,7 @@ View_moveToIndex(m, v, n, w) {
   View_#%n%_#%w%_margins        := View_#%m%_#%v%_margins
   View_#%n%_#%w%_showStackArea  := View_#%m%_#%v%_showStackArea
   View_#%n%_#%w%_wndIds         := View_#%m%_#%v%_wndIds
-  StringSplit, View_#%n%_#%w%_margin, View_#%n%_#%w%_margin, `;
+  StringSplit, View_#%n%_#%w%_margin, View_#%n%_#%w%_margins, `;
   StringTrimRight, wndIds, View_#%n%_#%w%_wndIds, 1
   Loop, PARSE, wndIds, `;
   {
@@ -238,7 +241,7 @@ View_moveWindow(i=0, d=0) {
   WinGet, aWndId, ID, A
   m := Manager_aMonitor
   v := Monitor_#%m%_aView_#1
-  If Tiler_isActive(Manager_aMonitor, v) And InStr(Manager_managedWndIds, aWndId ";") And Not (i = 0 And d = 0) And (i <= View_#%m%_#%v%_area_#0) {
+  If Tiler_isActive(Manager_aMonitor, v) And InStr(Manager_managedWndIds, aWndId ";") And Not (i = 0 And d = 0) And View_#%m%_#%v%_area_#0 And (i <= View_#%m%_#%v%_area_#0) {
     If (i = 0)
       i := Manager_loop(Window_#%aWndId%_area, d, 1, View_#%m%_#%v%_area_#0)
     Window_move(aWndId, View_#%m%_#%v%_area_#%i%_x, View_#%m%_#%v%_area_#%i%_y, View_#%m%_#%v%_area_#%i%_width, View_#%m%_#%v%_area_#%i%_height)
@@ -292,6 +295,7 @@ View_setLayout(i, d = 0) {
 View_setLayoutProperty(name, i, d, opt = 0) {
   Local a, l, v
 
+  a := False
   v := Monitor_#%Manager_aMonitor%_aView_#1
   l := View_#%Manager_aMonitor%_#%v%_layout_#1
   If Tiler_isActive(Manager_aMonitor, v) {
@@ -367,11 +371,11 @@ View_toggleMargins()
 {
   Local v
 
-  Debug_logMessage("DEBUG[3] View_toggleMargins(" . View_#%Manager_aMonitor%_#%v%_margin1 . ", " . View_#%Manager_aMonitor%_#%v%_margin2 . ", " . View_#%Manager_aMonitor%_#%v%_margin3 . ", " . View_#%Manager_aMonitor%_#%v%_margin4 . ")", 3)
 
   If Not (Config_viewMargins = "0;0;0;0")
   {
     v := Monitor_#%Manager_aMonitor%_aView_#1
+    Debug_logMessage("DEBUG[3] View_toggleMargins(" . View_#%Manager_aMonitor%_#%v%_margin1 . ", " . View_#%Manager_aMonitor%_#%v%_margin2 . ", " . View_#%Manager_aMonitor%_#%v%_margin3 . ", " . View_#%Manager_aMonitor%_#%v%_margin4 . ")", 3)
     If (View_#%Manager_aMonitor%_#%v%_margins = "0;0;0;0")
       View_#%Manager_aMonitor%_#%v%_margins := Config_viewMargins
     Else

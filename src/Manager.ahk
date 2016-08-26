@@ -24,6 +24,7 @@ Manager_init()
   ; New/closed windows, active changed,
   Manager_windowsDirty := 0
   Manager_aMonitor := 1
+  View_tiledWndId0 := 0
 
   doRestore := 0
   If (Config_autoSaveSession = "ask")
@@ -197,22 +198,28 @@ Manager_doMaintenance:
 Return
 
 Manager_getWindowInfo() {
-  Local aWndClass, aWndHeight, aWndId, aWndPId, aWndPName, aWndStyle, aWndTitle, aWndWidth, aWndX, aWndY, text, v
+  Local aWndClass, aWndHeight, aWndId, aWndPId, aWndPName, aWndStyle, aWndTitle, aWndWidth, aWndX, aWndY, detectHiddenWnds, isHidden, text, v
 
+  detectHiddenWnds := A_DetectHiddenWindows
+  DetectHiddenWindows, On
   WinGet, aWndId, ID, A
-  WinGetClass, aWndClass, ahk_id %aWndId%
-  WinGetTitle, aWndTitle, ahk_id %aWndId%
+  DetectHiddenWindows, %detectHiddenWnds%
+  isHidden := Window_getHidden(aWndId, aWndClass, aWndTitle)
   WinGet, aWndPName, ProcessName, ahk_id %aWndId%
   WinGet, aWndPId, PID, ahk_id %aWndId%
   WinGet, aWndStyle, Style, ahk_id %aWndId%
   WinGet, aWndMinMax, MinMax, ahk_id %aWndId%
   WinGetPos, aWndX, aWndY, aWndWidth, aWndHeight, ahk_id %aWndId%
-  text := "ID: " aWndId "`nclass:`t" aWndClass "`ntitle:`t" aWndTitle
+  text := "ID: " aWndId (isHidden ? " [hidden]" : "") "`nclass:`t" aWndClass "`ntitle:`t" aWndTitle
   If InStr(Bar_hideTitleWndIds, aWndId ";")
     text .= " [hidden]"
-  text .= "`nprocess:`t" aWndPName " [" aWndPId "]`nstyle:`t" aWndStyle "`nmetrics:`tx: " aWndX ", y: " aWndY ", width: " aWndWidth ", height: " aWndHeight "`ntags:`t" Window_#%aWndId%_tags
-  If Window_#%aWndId%_isFloating
-    text .= " [floating]"
+  text .= "`nprocess:`t" aWndPName " [" aWndPId "]`nstyle:`t" aWndStyle "`nmetrics:`tx: " aWndX ", y: " aWndY ", width: " aWndWidth ", height: " aWndHeight
+  If InStr(Manager_managedWndIds, aWndId ";") {
+    text .= "`ntags:`t" Window_#%aWndId%_tags
+    If Window_#%aWndId%_isFloating
+      text .= " [floating]"
+  } Else
+    text .= "`ntags:`t--"
   text .= "`n`nConfig_rule=" aWndClass ";" aWndTitle ";;" Manager_getWindowRule(aWndId)
   MsgBox, 260, bug.n: Window Information, % text "`n`nCopy text to clipboard?"
   IfMsgBox Yes
@@ -221,7 +228,7 @@ Manager_getWindowInfo() {
 
 Manager_getWindowList()
 {
-  Local text, v, aWndId, wndIds, aWndTitle
+  Local text, v, aWndId, aWndTitle, wndIds, wndTitle
 
   v := Monitor_#%Manager_aMonitor%_aView_#1
   aWndId := View_getActiveWindow(Manager_aMonitor, v)
@@ -246,26 +253,26 @@ Manager_getWindowRule(wndId) {
   
   rule := ""
   WinGet, wndMinMax, MinMax, ahk_id %wndId%
-  If InStr(Manager_managedWndIds, wndId ";")
+  If InStr(Manager_managedWndIds, wndId ";") {
     rule .= "1;"
-  Else
-    rule .= "0;"
-  If (Window_#%wndId%_monitor = "")
-    rule .= "0;"
-  Else
-    rule .= Window_#%wndId%_monitor ";"
-  If (Window_#%wndId%_tags = "")
-    rule .= "0;"
-  Else
-    rule .= Window_#%wndId%_tags ";"
-  If Window_#%wndId%_isFloating
-    rule .= "1;"
-  Else
-    rule .= "0;"
-  If Window_#%wndId%_isDecorated
-    rule .= "1;"
-  Else
-    rule .= "0;"
+    If (Window_#%wndId%_monitor = "")
+      rule .= "0;"
+    Else
+      rule .= Window_#%wndId%_monitor ";"
+    If (Window_#%wndId%_tags = "")
+      rule .= "0;"
+    Else
+      rule .= Window_#%wndId%_tags ";"
+    If Window_#%wndId%_isFloating
+      rule .= "1;"
+    Else
+      rule .= "0;"
+    If Window_#%wndId%_isDecorated
+      rule .= "1;"
+    Else
+      rule .= "0;"
+  } Else
+    rule .= "0;;;;;"
   If InStr(Bar_hideTitleWndIds, wndId ";")
     rule .= "1;"
   Else
@@ -302,7 +309,7 @@ Manager_loop(index, increment, lowerBound, upperBound) {
 }
 
 Manager__setWinProperties(wndId, isManaged, m, tags, isDecorated, isFloating, hideTitle, action = "") {
-  Local a
+  Local a := False
 
   If Not InStr(Manager_allWndIds, wndId ";")
     Manager_allWndIds .= wndId ";"
@@ -317,6 +324,7 @@ Manager__setWinProperties(wndId, isManaged, m, tags, isDecorated, isFloating, hi
     Window_#%wndId%_tags        := tags
     Window_#%wndId%_isDecorated := isDecorated
     Window_#%wndId%_isFloating  := isFloating
+    Window_#%wndId%_isMinimized := False
     Window_#%wndId%_area        := 0
 
     If Not Config_showBorder
@@ -413,7 +421,7 @@ Manager_maximizeWindow() {
   Local aWndId
 
   WinGet, aWndId, ID, A
-  If Not Window_#%aWndId%_isFloating
+  If InStr(Manager_managedWndIds, aWndId ";") And Not Window_#%aWndId%_isFloating
     View_toggleFloatingWindow(aWndId)
   Window_set(aWndId, "Top", "")
 
@@ -426,7 +434,7 @@ Manager_minimizeWindow() {
   WinGet, aWndId, ID, A
   aView := Monitor_#%Manager_aMonitor%_aView_#1
   StringReplace, View_#%Manager_aMonitor%_#%aView%_aWndIds, View_#%Manager_aMonitor%_#%aView%_aWndIds, % aWndId ";",, All
-  If Not Window_#%aWndId%_isFloating
+  If InStr(Manager_managedWndIds, aWndId ";") And Not Window_#%aWndId%_isFloating
     View_toggleFloatingWindow(aWndId)
   Window_set(aWndId, "Bottom", "")
 
@@ -437,7 +445,7 @@ Manager_moveWindow() {
   Local aWndId, SC_MOVE, WM_SYSCOMMAND
 
   WinGet, aWndId, ID, A
-  If Not Window_#%aWndId%_isFloating
+  If InStr(Manager_managedWndIds, aWndId . ";") And Not Window_#%aWndId%_isFloating
     View_toggleFloatingWindow(aWndId)
   Window_set(aWndId, "Top", "")
 
@@ -447,10 +455,21 @@ Manager_moveWindow() {
 }
 
 Manager_onDisplayChange(a, wParam, uMsg, lParam) {
+  Global
+  
   Debug_logMessage("DEBUG[1] Manager_onDisplayChange( a: " . a . ", uMsg: " . uMsg . ", wParam: " . wParam . ", lParam: " . lParam . " )", 1)
-  MsgBox, 0x4, , Would you like to reset the monitor configuration?
+  MsgBox, 291, , % "Would you like to reset the monitor configuration?`n'No' will only rearrange all active views.`n'Cancel' will result in no change."
   IfMsgBox Yes
     Manager_resetMonitorConfiguration()
+  Else IfMsgBox No
+  {
+    Loop, % Manager_monitorCount {
+      View_arrange(A_Index, Monitor_#%A_Index%_aView_#1)
+      Bar_updateView(A_Index, Monitor_#%A_Index%_aView_#1)
+    }
+    Bar_updateStatus()
+    Bar_updateTitle()
+  }
 }
 
 /*
@@ -539,7 +558,9 @@ Manager_onShellMessage(wParam, lParam) {
   ;;   Look into the use of AHK synchronization primitives.
   If (wParam = 1 Or wParam = 2 Or wParam = 4 Or wParam = 6 Or wParam = 32772) And lParam And Not Manager_hideShow
   {
-    isChanged := Manager_sync(wndIds)
+    Sleep, % Config_shellMsgDelay
+    wndIds := ""
+    a := isChanged := Manager_sync(wndIds)
     If wndIds
       isChanged := False
 
@@ -550,7 +571,7 @@ Manager_onShellMessage(wParam, lParam) {
       Bar_updateView(Manager_aMonitor, Monitor_#%Manager_aMonitor%_aView_#1)
     }
 
-    If (Manager_monitorCount > 1)
+    If (Manager_monitorCount > 1 And a > -1)
     {
       WinGet, aWndId, ID, A
       WinGetPos, aWndX, aWndY, aWndWidth, aWndHeight, ahk_id %aWndId%
@@ -608,7 +629,11 @@ Manager_onShellMessage(wParam, lParam) {
     }
 
     If InStr(Manager_managedWndIds, lParam ";") {
-      View_setActiveWindow(Manager_aMonitor, Monitor_#%Manager_aMonitor%_aView_#1, lParam)
+      WinGetPos, aWndX, aWndY, aWndWidth, aWndHeight, ahk_id %lParam%
+      If (Monitor_get(aWndX + aWndWidth / 2, aWndY + aWndHeight / 2) = Manager_aMonitor)
+        View_setActiveWindow(Manager_aMonitor, Monitor_#%Manager_aMonitor%_aView_#1, lParam)
+      Else
+        Manager_winActivate(View_getActiveWindow(Manager_aMonitor, Monitor_#%Manager_aMonitor%_aView_#1))
       If Window_#%lParam%_isMinimized {
         Window_#%lParam%_isFloating := False
         Window_#%lParam%_isMinimized := False
@@ -650,6 +675,8 @@ Manager_override(rule = "") {
 }
 
 Manager_registerShellHook() {
+  Global Config_monitorDisplayChangeMessages
+  
   WM_DISPLAYCHANGE := 126   ;; This message is sent when the display resolution has changed.
   Gui, +LastFound
   hWnd := WinExist()
@@ -659,7 +686,8 @@ Manager_registerShellHook() {
   Debug_logMessage("DEBUG[1] Manager_registerShellHook; hWnd: " . hWnd . ", wndClass: " . wndClass . ", wndTitle: " . wndTitle, 1)
   msgNum := DllCall("RegisterWindowMessage", "Str", "SHELLHOOK")
   OnMessage(msgNum, "Manager_onShellMessage")
-  OnMessage(WM_DISPLAYCHANGE, "Manager_onDisplayChange")
+  If Config_monitorDisplayChangeMessages
+    OnMessage(WM_DISPLAYCHANGE, "Manager_onDisplayChange")
 }
 ;; SKAN: How to Hook on to Shell to receive its messages? (http://www.autohotkey.com/forum/viewtopic.php?p=123323#123323)
 
@@ -736,14 +764,14 @@ Manager_restoreWindowBorders()
 
   If Config_selBorderColor
     DllCall("SetSysColors", "Int", 1, "Int*", 10, "UInt*", Manager_normBorderColor)
-  If (Config_borderWidth > 0) Or (Config_borderPadding >= 0 And A_OSVersion = WIN_VISTA)
+  If (Config_borderWidth > 0) Or (Config_borderPadding >= 0 And A_OSVersion = "WIN_VISTA")
   {
-    ncmSize := VarSetCapacity(ncm, 4 * (A_OSVersion = WIN_VISTA ? 11 : 10) + 5 * (28 + 32 * (A_IsUnicode ? 2 : 1)), 0)
+    ncmSize := VarSetCapacity(ncm, 4 * (A_OSVersion = "WIN_VISTA" ? 11 : 10) + 5 * (28 + 32 * (A_IsUnicode ? 2 : 1)), 0)
     NumPut(ncmSize, ncm, 0, "UInt")
     DllCall("SystemParametersInfo", "UInt", 0x0029, "UInt", ncmSize, "UInt", &ncm, "UInt", 0)
     If (Config_borderWidth > 0)
       NumPut(Manager_borderWidth, ncm, 4, "Int")
-    If (Config_borderPadding >= 0 And A_OSVersion = WIN_VISTA)
+    If (Config_borderPadding >= 0 And A_OSVersion = "WIN_VISTA")
       NumPut(Manager_borderPadding, ncm, 40 + 5 * (28 + 32 * (A_IsUnicode ? 2 : 1)), "Int")
     DllCall("SystemParametersInfo", "UInt", 0x002a, "UInt", ncmSize, "UInt", &ncm, "UInt", 0)
   }
@@ -914,7 +942,12 @@ Manager_saveWindowState(filename, nm, nv) {
     isManaged := InStr(Manager_managedWndIds, wndId . ";")
     isTitleHidden := InStr(Bar_hideTitleWndIds, wndId . ";")
 
-    text .= "Window " . wndId . ";" . wndPName . ";" . Window_#%wndId%_monitor . ";" . Window_#%wndId%_tags . ";" . Window_#%wndId%_isFloating . ";" . Window_#%wndId%_isDecorated . ";" . isTitleHidden . ";" . isManaged . ";" . title . "`n"
+    text .= "Window " . wndId . ";" . wndPName . ";"
+    If isManaged
+      text .= Window_#%wndId%_monitor . ";" . Window_#%wndId%_tags . ";" . Window_#%wndId%_isFloating . ";" . Window_#%wndId%_isDecorated . ";"
+    Else
+      text .= ";;;;"
+    text .= isTitleHidden . ";" . isManaged . ";" . title . "`n"
   }
   DetectHiddenWindows, %detectHidden%
 
@@ -968,7 +1001,7 @@ Manager_setViewMonitor(i, d = 0) {
     {
       Loop, % Config_viewCount {
         StringReplace, View_#%Manager_aMonitor%_#%A_Index%_wndIds, View_#%Manager_aMonitor%_#%A_Index%_wndIds, %A_LoopField%`;,
-        View_setActiveWindow(Manager_aMonitor, A_Index, 0)
+        StringReplace, View_#%Manager_aMonitor%_#%A_Index%_aWndIds, View_#%Manager_aMonitor%_#%A_Index%_aWndIds, %A_LoopField%`;,
       }
       Window_#%A_LoopField%_monitor := i
       Window_#%A_LoopField%_tags := 1 << v - 1
@@ -998,16 +1031,16 @@ Manager_setWindowBorders()
     SetFormat, Integer, d
     DllCall("SetSysColors", "Int", 1, "Int*", 10, "UInt*", Config_selBorderColor)
   }
-  If (Config_borderWidth > 0) Or (Config_borderPadding >= 0 And A_OSVersion = WIN_VISTA)
+  If (Config_borderWidth > 0) Or (Config_borderPadding >= 0 And A_OSVersion = "WIN_VISTA")
   {
-    ncmSize := VarSetCapacity(ncm, 4 * (A_OSVersion = WIN_VISTA ? 11 : 10) + 5 * (28 + 32 * (A_IsUnicode ? 2 : 1)), 0)
+    ncmSize := VarSetCapacity(ncm, 4 * (A_OSVersion = "WIN_VISTA" ? 11 : 10) + 5 * (28 + 32 * (A_IsUnicode ? 2 : 1)), 0)
     NumPut(ncmSize, ncm, 0, "UInt")
     DllCall("SystemParametersInfo", "UInt", 0x0029, "UInt", ncmSize, "UInt", &ncm, "UInt", 0)
     Manager_borderWidth := NumGet(ncm, 4, "Int")
     Manager_borderPadding := NumGet(ncm, 40 + 5 * (28 + 32 * (A_IsUnicode ? 2 : 1)), "Int")
     If (Config_borderWidth > 0)
       NumPut(Config_borderWidth, ncm, 4, "Int")
-    If (Config_borderPadding >= 0 And A_OSVersion = WIN_VISTA)
+    If (Config_borderPadding >= 0 And A_OSVersion = "WIN_VISTA")
       NumPut(Config_borderPadding, ncm, 40 + 5 * (28 + 32 * (A_IsUnicode ? 2 : 1)), "Int")
     DllCall("SystemParametersInfo", "UInt", 0x002a, "UInt", ncmSize, "UInt", &ncm, "UInt", 0)
   }
@@ -1020,8 +1053,7 @@ Manager_setWindowMonitor(i, d = 0) {
   If (Manager_monitorCount > 1 And InStr(Manager_managedWndIds, aWndId ";")) {
     Loop, % Config_viewCount {
       StringReplace, View_#%Manager_aMonitor%_#%A_Index%_wndIds, View_#%Manager_aMonitor%_#%A_Index%_wndIds, %aWndId%`;,
-      If (View_getActiveWindow(Manager_aMonitor, A_Index) = aWndId)
-        View_setActiveWindow(Manager_aMonitor, A_Index, 0)
+      StringReplace, View_#%Manager_aMonitor%_#%A_Index%_aWndIds, View_#%Manager_aMonitor%_#%A_Index%_aWndIds, %aWndId%`;, All
       Bar_updateView(Manager_aMonitor, A_Index)
     }
     If Config_dynamicTiling
@@ -1047,7 +1079,7 @@ Manager_sizeWindow() {
   Local aWndId, SC_SIZE, WM_SYSCOMMAND
 
   WinGet, aWndId, ID, A
-  If Not Window_#%aWndId%_isFloating
+  If InStr(Manager_managedWndIds, aWndId . ";") And Not Window_#%aWndId%_isFloating
     View_toggleFloatingWindow(aWndId)
   Window_set(aWndId, "Top", "")
 
@@ -1109,13 +1141,16 @@ Manager_initial_sync(doRestore) {
 Manager_sync(ByRef wndIds = "")
 {
   Local a, flag, shownWndIds, v, visibleWndIds, wndId
+  a := 0
 
+  shownWndIds := ""
   Loop, % Manager_monitorCount
   {
     v := Monitor_#%A_Index%_aView_#1
     shownWndIds .= View_#%A_Index%_#%v%_wndIds
   }
   ;; Check all visible windows against the known windows
+  visibleWndIds := ""
   WinGet, wndId, List, , ,
   Loop, % wndId
   {
@@ -1125,7 +1160,7 @@ Manager_sync(ByRef wndIds = "")
       {
         flag := Manager_manage(Manager_aMonitor, Monitor_#%Manager_aMonitor%_aView_#1, wndId%A_Index%)
         If flag
-          a := flag
+          a := 1
       }
       Else If Not Window_isHung(wndId%A_Index%)
       {
@@ -1145,8 +1180,8 @@ Manager_sync(ByRef wndIds = "")
     If Not InStr(visibleWndIds, A_LoopField)
     {
       flag := Manager_unmanage(A_LoopField)
-      If flag
-        a := flag
+      If (flag And a = 0)
+        a := -1
     }
   }
 
@@ -1179,13 +1214,12 @@ Manager_unmanage(wndId) {
 }
 
 Manager_winActivate(wndId) {
+  Global Manager_aMonitor
+  
   Manager_setCursor(wndId)
   Debug_logMessage("DEBUG[1] Activating window: " wndId, 1)
   If Not wndId {
-    If (A_OSVersion = "WIN_8" Or A_OSVersion = "WIN_8.1")
-      WinGet, wndId, ID, ahk_class WorkerW
-    Else
-      WinGet, wndId, ID, Program Manager ahk_class Progman
+    wndId := WinExist("bug.n_BAR_" . Manager_aMonitor)
     Debug_logMessage("DEBUG[1] Activating Desktop: " wndId, 1)
   }
 

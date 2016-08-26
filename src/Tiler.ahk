@@ -71,8 +71,8 @@ Tiler_getLayoutSymbol(m, v, n) {
 }
 
 Tiler_getMFactorD(m, v, d, dFact) {
-  Local callD, minD
-  Static lastCall, mFactD
+  Local callD, mFactD, minD
+  Static lastCall := 0
 
   callD := A_TickCount - lastCall
   lastCall := A_TickCount
@@ -83,6 +83,7 @@ Tiler_getMFactorD(m, v, d, dFact) {
   Else
     minD := d / dFact**5
 
+  mFactD := 0
   If (callD < Config_mFactCallInterval And d * mFactD > 0) {
     ;; Accelerate mFactD, if the last call is inside the time frame and went in the same direction.
     mFactD *= dFact
@@ -340,7 +341,7 @@ Tiler_toggleStackArea(m ,v) {
 }
 
 Tiler_traceAreas(m, v, continuously) {
-  Local h1, h2, n, w1, w2, wndTitle, x1, x2, y1, y2, y3
+  Local borderW, h1, h2, n, w1, w2, wndTitle, x1, x2, y1, y2, y3
 
   x1 := Monitor_#%m%_x + View_#%m%_#%v%_layoutGapWidth + View_#%m%_#%v%_margin4
   y1 := Monitor_#%m%_y + View_#%m%_#%v%_layoutGapWidth + View_#%m%_#%v%_margin1
@@ -349,19 +350,19 @@ Tiler_traceAreas(m, v, continuously) {
   wndTitle := "bug.n_TRACE_" m "_" v
   Gui, 98: Default
   Gui, Destroy
-  Gui, -Caption +Disabled +ToolWindow
-  Gui, +AlwaysOnTop
+  Gui, +AlwaysOnTop -Caption +Disabled +ToolWindow
   Gui, Color, %Config_foreColor_#2_#1%
   Gui, Font, c%Config_fontColor_#1_#3% s%Config_largeFontSize%, %Config_fontName%
 
+  borderW := Config_borderWidth + (Config_borderPadding < 0 ? 0 : Config_borderPadding)
   n := View_#%m%_#%v%_area_#0
   Loop, % n {
-    x2 := View_#%m%_#%v%_area_#%A_Index%_x - x1 + Config_borderWidth + Config_borderPadding
-    y2 := View_#%m%_#%v%_area_#%A_Index%_y - y1 + Config_borderWidth + Config_borderPadding
-    w2 := View_#%m%_#%v%_area_#%A_Index%_width - 2 * (Config_borderWidth + Config_borderPadding)
-    h2 := View_#%m%_#%v%_area_#%A_Index%_height - 2 * (Config_borderWidth + Config_borderPadding)
+    x2 := View_#%m%_#%v%_area_#%A_Index%_x - x1 + borderW
+    y2 := View_#%m%_#%v%_area_#%A_Index%_y - y1 + borderW
+    w2 := View_#%m%_#%v%_area_#%A_Index%_width - 2 * borderW
+    h2 := View_#%m%_#%v%_area_#%A_Index%_height - 2 * borderW
     y3 := y2 + (h2 - Config_largeFontSize) / 2
-    Gui, Add, Progress, x%x2% y%y2% w%w2% h%h2% Background%Config_backColor_#1_#3%
+    Gui, Add, Progress, x%x2% y%y2% w%w2% h%h2% Background%Config_backColor_#1_#3%, 100
     Gui, Add, Text, x%x2% y%y3% w%w2% BackgroundTrans Center, % A_Index
     Debug_logMessage("DEBUG[2] View_traceAreas: i = " A_Index " / " n ", x = " x2 ", y = " y2 ", w = " w2 ", h = " h2, 2)
   }
