@@ -263,6 +263,8 @@ Window_move(wndId, x, y, width, height) {
     Debug_logMessage("DEBUG[2] Window_move: Potentially hung window " . wndId, 1)
     Return, 1
   } Else {
+	width := Min(width , 1920)
+  
     WinMove, ahk_id %wndId%, , %x%, %y%, %width%, %height%
     
     If Not (wndMinMax = 1) Or Not Window_#%wndId%_isDecorated Or Manager_windowNotMaximized(width, height) {
@@ -271,6 +273,9 @@ Window_move(wndId, x, y, width, height) {
         y -= wndY - y
         width  += width - wndW - 1
         height += height - wndH - 1
+		
+		width := Min(width , 1933)
+
         WinMove, ahk_id %wndId%, , %x%, %y%, %width%, %height%
       }
     }

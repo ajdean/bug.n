@@ -79,6 +79,7 @@ Config_init() {
   Config_syncMonitorViews   := 0
   Config_viewFollowsTagged  := False
   Config_viewMargins        := "0;0;0;0"
+  Config_primaryMonitor     := 1
 
   ;; Config_rule_#<i> := "<class>;<title>;<function name>;<is managed>;<m>;<tags>;<is floating>;<is decorated>;<hide title>;<action>"
   Config_rule_#1   := ".*;.*;;1;0;0;0;0;0;"

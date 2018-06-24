@@ -26,13 +26,13 @@ Bar_init(m) {
   If (Config_verticalBarPos = "tray" And Monitor_#%m%_taskBarWnd) {
     Bar_ctrlHeight := Round(Bar_ctrlHeight * Config_scalingFactor)
     Bar_height := Round(Bar_height * Config_scalingFactor)
-	
+
 	;WinGetPos, , , trayWidth, , ahk_class TrayNotifyWnd
 	;MsgBox % trayWidth
-	
-	if (m = 1)
+
+	if (m = Config_primaryMonitor)
 	{
-		wndWidth -= 282
+		wndWidth -= 1920
 	}
   }
 
@@ -44,7 +44,7 @@ Bar_init(m) {
   y1 := 0
   y2 := (Bar_ctrlHeight - Bar_textHeight) / 2
   h2 := Bar_textHeight
-  
+
   ;; Create the GUI window
   wndTitle := "bug.n_BAR_" m
   GuiN := (m - 1) + 1
@@ -119,7 +119,7 @@ Bar_init(m) {
     y1 += h1
     y2 += h1
   }
-  If(m > 1)
+  If(m != Config_primaryMonitor)
   {
     titleWidth -= 282
   }
@@ -361,17 +361,17 @@ Bar_toggleCommandGui() {
     Manager_winActivate(Bar_aWndId)
   } Else {
     Bar_cmdGuiIsVisible := True
-    
+
     If (Config_verticalBarPos = "tray")
       x := Monitor_#%Manager_aMonitor%_x + Monitor_#%Manager_aMonitor%_barX + Monitor_#%Manager_aMonitor%_barWidth - Bar_#0_#0W
     Else
       x := Monitor_#%Manager_aMonitor%_barX + Monitor_#%Manager_aMonitor%_barWidth - Bar_#0_#0W   ;; x := mX + (mBarX - mX) + mBarW - w
-    
+
     If (Config_verticalBarPos = "top") Or (Config_verticalBarPos = "tray") And (Monitor_#%Manager_aMonitor%_taskBarPos = "top" Or Not Monitor_#%Manager_aMonitor%_taskBarWnd)
       y := Monitor_#%Manager_aMonitor%_y
     Else
       y := Monitor_#%Manager_aMonitor%_y + Monitor_#%Manager_aMonitor%_height - Bar_#0_#0H
-    
+
     Gui, Show
     WinGet, wndId, ID, bug.n_BAR_0
     WinMove, ahk_id %wndId%, , %x%, %y%
@@ -460,7 +460,7 @@ Bar_updateStatus() {
     }
     If Config_readinDate
       FormatTime, time, , % Config_readinDateFormat
-      GuiControl, , Bar_#%m%_date, % time 
+      GuiControl, , Bar_#%m%_date, % time
     If Config_readinTime
       FormatTime, time, , % Config_readinTimeFormat
       GuiControl, , Bar_#%m%_time, % time
