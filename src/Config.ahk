@@ -99,13 +99,23 @@ Config_init() {
   Config_rule_#15  := "IEFrame;.*Internet Explorer;;1;0;0;0;1;0;"
   Config_rule_#16  := "MozillaWindowClass;.*Mozilla Firefox;;1;0;0;0;1;0;"
   Config_rule_#17  := "MozillaDialogClass;.*;;1;0;0;1;1;0;"
-  Config_ruleCount := 17  ;; This variable has to be set to the total number of active rules above.
+  Config_rule_#18  := "ApplicationFrameWindow;.*Edge;;1;0;0;0;1;0;"
+  Config_ruleCount := 18  ;; This variable has to be set to the total number of active rules above.
 
   ;; Configuration management
   Config_autoSaveSession := "auto"    ;; "off" | "auto" | "ask"
   Config_maintenanceInterval := 5000
+  Config_monitorDisplayChangeMessages := True
 
+  Config_hotkeyCount := 0
   Config_restoreConfig(Config_filePath)
+  If (SubStr(A_OSVersion, 1, 3) = "10.") {
+    Config_borderWidth    := 0
+    Config_borderPadding  := -1
+    Config_showBorder     := True
+    Config_selBorderColor := ""
+  }
+  
   Config_getSystemSettings()
   Config_initColors()
   Loop, % Config_layoutCount {
@@ -152,6 +162,14 @@ Config_convertSystemColor(systemColor)
   Return, rr gg bb
 }
 
+Config_edit() {
+  Global Config_filePath
+  
+  If Not FileExist(Config_filePath)
+    Config_UI_saveSession()
+  Run, edit %Config_filePath%
+}
+
 Config_getSystemSettings() {
   Global Config_backColor_#1, Config_foreColor_#1, Config_fontColor_#1
   Global Config_backColor_#2, Config_foreColor_#2, Config_fontColor_#2
@@ -159,7 +177,7 @@ Config_getSystemSettings() {
   Global Config_fontName, Config_fontSize, Config_scalingFactor
 
   If Not Config_fontName {
-    ncmSize := VarSetCapacity(ncm, 4 * (A_OSVersion = WIN_VISTA ? 11 : 10) + 5 * (28 + 32 * (A_IsUnicode ? 2 : 1)), 0)
+    ncmSize := VarSetCapacity(ncm, 4 * (A_OSVersion = "WIN_VISTA" ? 11 : 10) + 5 * (28 + 32 * (A_IsUnicode ? 2 : 1)), 0)
     NumPut(ncmSize, ncm, 0, "UInt")
     DllCall("SystemParametersInfo", "UInt", 0x0029, "UInt", ncmSize, "UInt", &ncm, "UInt", 0)
 
@@ -170,7 +188,7 @@ Config_getSystemSettings() {
     ;; maestrith: Script Writer (http://www.autohotkey.net/~maestrith/Script Writer/)
   }
   If Not Config_fontSize {
-    ncmSize := VarSetCapacity(ncm, 4 * (A_OSVersion = WIN_VISTA ? 11 : 10) + 5 * (28 + 32 * (A_IsUnicode ? 2 : 1)), 0)
+    ncmSize := VarSetCapacity(ncm, 4 * (A_OSVersion = "WIN_VISTA" ? 11 : 10) + 5 * (28 + 32 * (A_IsUnicode ? 2 : 1)), 0)
     NumPut(ncmSize, ncm, 0, "UInt")
     DllCall("SystemParametersInfo", "UInt", 0x0029, "UInt", ncmSize, "UInt", &ncm, "UInt", 0)
 
@@ -380,12 +398,10 @@ Config_saveSession(original, target)
   ;; The FileMove below is an all-or-nothing replacement of the file.
   ;; We don't want to leave this half-finished.
   FileAppend, %text%, %tmpfilename%
-  If ErrorLevel
-  {
+  If ErrorLevel And Not (original = Config_filePath And target = Config_filePath And Not FileExist(original)) {
     If FileExist(tmpfilename)
       FileDelete, %tmpfilename%
-  }
-  Else
+  } Else
     FileMove, %tmpfilename%, %target%, 1
 }
 
@@ -499,7 +515,7 @@ Config_UI_saveSession() {
 !+y::View_traceAreas()
 
 ;; Administration
-#^e::Run, edit %Config_filePath%
+#^e::Config_edit()
 #^s::Config_UI_saveSession()
 #^r::Reload
 #^q::ExitApp

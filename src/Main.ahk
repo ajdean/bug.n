@@ -24,9 +24,11 @@ SetTitleMatchMode, fast
 SetWinDelay, 10
 #NoEnv
 #SingleInstance force
+;#Warn                         ; Enable warnings to assist with detecting common errors.
 #WinActivateForce
 
 ;; Pseudo main function
+  Main_appDir := ""
   If 0 = 1
     Main_appDir = %1%
 
@@ -39,8 +41,10 @@ SetWinDelay, 10
   Config_init()
 
   Menu, Tray, Tip, %NAME% %VERSION%
-  IfExist %A_ScriptDir%\logo.ico
-    Menu, Tray, Icon, %A_ScriptDir%\logo.ico
+  If A_IsCompiled
+    Menu, Tray, Icon, %A_ScriptFullPath%, -159
+  If FileExist(A_ScriptDir . "\logo.ico")
+    Menu, Tray, Icon, % A_ScriptDir . "\logo.ico"
   Menu, Tray, NoStandard
   Menu, Tray, Add, Toggle bar, Main_toggleBar
   Menu, Tray, Add, Help, Main_help

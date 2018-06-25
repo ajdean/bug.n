@@ -150,6 +150,7 @@ Bar_init(m) {
   WinSet, Transparent, %Config_barTransparency%, %wndTitle%
   ;Winset, Alwaysontop, , %wndTitle%
   wndId := WinExist(wndTitle)
+  Bar_appBarData := ""
   If (Config_verticalBarPos = "tray" And Monitor_#%m%_taskBarWnd) {
     ;trayWndId := WinExist("ahk_id " Monitor_#%m%_taskBarClass)
     ;DllCall("SetParent", "UInt", wndId, "UInt", trayWndId)
@@ -180,8 +181,10 @@ Bar_init(m) {
 
 Bar_initCmdGui()
 {
-  Global Bar_#0_#0, Bar_#0_#0H, Bar_#0_#0W, Bar_#0_#1, Bar_cmdGuiIsVisible, Config_backColor_#1_#3, Config_barCommands, Config_fontName, Config_fontSize, Config_foreColor_#1_#3
+  Global Bar_#0_#0, Bar_#0_#0H, Bar_#0_#0W, Bar_#0_#1, Bar_cmdGuiIsVisible, Config_barCommands, Config_fontName, Config_fontSize
+  Global Config_backColor_#1_#3, Config_fontColor_#1_#3, Config_foreColor_#1_#3
 
+  Bar_#0_#0 := ""
   Bar_cmdGuiIsVisible := False
   wndTitle := "bug.n_BAR_0"
   Gui, 99: Default
@@ -458,12 +461,14 @@ Bar_updateStatus() {
       GuiControl, , Bar_#%m%_volume_highlighted, %vol%
       GuiControl, , Bar_#%m%_volume, % " VOL: " SubStr("  " vol, -2) "% "
     }
-    If Config_readinDate
+    If Config_readinDate {
       FormatTime, time, , % Config_readinDateFormat
       GuiControl, , Bar_#%m%_date, % time
-    If Config_readinTime
+    }
+    If Config_readinTime {
       FormatTime, time, , % Config_readinTimeFormat
       GuiControl, , Bar_#%m%_time, % time
+  }
   }
 }
 
@@ -474,7 +479,7 @@ Bar_updateTitle() {
   WinGetTitle, aWndTitle, ahk_id %aWndId%
   If InStr(Bar_hideTitleWndIds, aWndId ";") Or (aWndTitle = "bug.n_BAR_0")
     aWndTitle := ""
-  If Window_#%aWndId%_isFloating
+  If aWndId And InStr(Manager_managedWndIds, aWndId . ";") And Window_#%aWndId%_isFloating
     aWndTitle := "~ " aWndTitle
   If (Manager_monitorCount > 1)
     aWndTitle := "[" Manager_aMonitor "] " aWndTitle
